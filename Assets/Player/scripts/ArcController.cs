@@ -37,7 +37,7 @@ public class ArcController : NetworkBehaviour
     private float syncedArcAngle;
 
     [SerializeField]
-    private float swordDamage = 10f; // Урон от меча, теперь можно редактировать в инспекторе
+    private float swordDamage = 10f; // пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
     private HashSet<GameObject> hitObjectsDuringCurrentAttack;
 
@@ -51,8 +51,8 @@ public class ArcController : NetworkBehaviour
     private void UpdateHealthBar()
     {
         float healthPercentage = currentHealth / maxHealth;
-        Debug.Log("Updating health bar: " + healthPercentage); // Добавлено
-        healthBar.transform.localScale = new Vector3(healthPercentage, 1, 1);
+        Debug.Log("Updating health bar: " + healthPercentage); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        healthBar.transform.localScale = new Vector3(healthPercentage, healthBar.transform.localScale.y, healthBar.transform.localScale.z);
     }
 
 
@@ -61,13 +61,13 @@ public class ArcController : NetworkBehaviour
         Debug.Log("Collision detected with: " + other.gameObject.name);
         if (isAttacking && !hitObjectsDuringCurrentAttack.Contains(other.gameObject))
         {
-            Debug.Log("Collision detected with: " + other.gameObject.tag); // Добавлено
+            Debug.Log("Collision detected with: " + other.gameObject.tag); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
             if (other.CompareTag("HitBox"))
             {
                 ArcController enemyArcController = other.GetComponentInParent<ArcController>();
                 if (enemyArcController != null)
                 {
-                    enemyArcController.CmdChangeHealth(-swordDamage); // Используем переменную swordDamage для урона
+                    enemyArcController.CmdChangeHealth(-swordDamage); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ swordDamage пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
                     hitObjectsDuringCurrentAttack.Add(other.gameObject);
                 }
             }
@@ -212,16 +212,16 @@ public class ArcController : NetworkBehaviour
         isAttacking = true;
         hitObjectsDuringCurrentAttack.Clear();
 
-        // Устанавливаем цвета индикаторов в зависимости от направления атаки
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
         if (attackFromRight)
         {
-            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% прозрачность
-            righto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% прозрачность
+            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+            righto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         }
         else
         {
-            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% прозрачность
-            righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% прозрачность
+            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+            righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
         }
 
         float angleStep = arcAngle / segments;
@@ -260,7 +260,7 @@ public class ArcController : NetworkBehaviour
         UpdateHealthBar();
         if (currentHealth <= 0)
         {
-            // Добавьте здесь логику смерти
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
         }
     }
 
