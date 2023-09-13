@@ -55,38 +55,33 @@ public class ArcController : NetworkBehaviour
         healthBar.transform.localScale = new Vector3(healthPercentage, healthBar.transform.localScale.y, healthBar.transform.localScale.z);
     }
 
-
-    private void OnTriggerEnter2D(Collider2D other)
+    public void OnSwordHit(Collider2D other, ArcController enemyArcController)
     {
-        Debug.Log("Collision detected with: " + other.gameObject.name);
-        if (isAttacking && !hitObjectsDuringCurrentAttack.Contains(other.gameObject))
+        Debug.Log("Collision 1 " + enemyArcController.isAttacking + " " + !enemyArcController.hitObjectsDuringCurrentAttack.Contains(other.gameObject)); // ���������
+
+        if (enemyArcController != null && enemyArcController.isAttacking && !enemyArcController.hitObjectsDuringCurrentAttack.Contains(other.gameObject))
         {
-            Debug.Log("Collision detected with: " + other.gameObject.tag); // ���������
             if (other.CompareTag("HitBox"))
             {
-                ArcController enemyArcController = other.GetComponentInParent<ArcController>();
-                if (enemyArcController != null)
-                {
-                    enemyArcController.CmdChangeHealth(-swordDamage); // ���������� ���������� swordDamage ��� �����
-                    hitObjectsDuringCurrentAttack.Add(other.gameObject);
-                }
+                Debug.Log("Collision 2 ");
+                CmdChangeHealth(-swordDamage); // ���������� ���������� swordDamage ��� �����
+                enemyArcController.hitObjectsDuringCurrentAttack.Add(other.gameObject);
             }
-            else if (other.CompareTag("HitBoxChamber"))
-            {
-                ArcController enemyArcController = other.GetComponentInParent<ArcController>();
-                if (enemyArcController != null && enemyArcController.isAttacking)
-                {
-                    if (attackFromRight != enemyArcController.attackFromRight)
-                    {
-                        enemyArcController.StopCoroutine(enemyArcController.SwordAttack());
-                        enemyArcController.isAttacking = false;
-                        enemyArcController.UpdateAttackIndicators();
+            // else if (other.CompareTag("HitBoxChamber"))
+            // {
+            // 	if (enemyArcController.isAttacking)
+            // 	{
+            // 		if (attackFromRight != enemyArcController.attackFromRight)
+            // 		{
+            // 			enemyArcController.StopCoroutine(enemyArcController.SwordAttack());
+            // 			enemyArcController.isAttacking = false;
+            // 			enemyArcController.UpdateAttackIndicators();
 
-                        StartCoroutine(SwordAttack());
-                        hitObjectsDuringCurrentAttack.Add(other.gameObject);
-                    }
-                }
-            }
+            // 			StartCoroutine(SwordAttack());
+            // 			hitObjectsDuringCurrentAttack.Add(other.gameObject);
+            // 		}
+            // 	}
+            // }
         }
     }
 
@@ -251,7 +246,6 @@ public class ArcController : NetworkBehaviour
         isAttacking = false;
         UpdateAttackIndicators();
     }
-
     [Command]
     public void CmdChangeHealth(float amount)
     {
