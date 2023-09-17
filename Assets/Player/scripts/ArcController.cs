@@ -57,33 +57,61 @@ public class ArcController : NetworkBehaviour
 
     public void OnSwordHit(Collider2D other, ArcController enemyArcController)
     {
-        Debug.Log("Collision 1 " + enemyArcController.isAttacking + " " + !enemyArcController.hitObjectsDuringCurrentAttack.Contains(other.gameObject)); // ���������
+        Debug.Log("Collision detected with " + other.tag); // Добавлено для отладки
 
         if (enemyArcController != null && enemyArcController.isAttacking && !enemyArcController.hitObjectsDuringCurrentAttack.Contains(other.gameObject))
         {
             if (other.CompareTag("HitBox"))
             {
-                Debug.Log("Collision 2 ");
-                CmdChangeHealth(-swordDamage); // ���������� ���������� swordDamage ��� �����
+                Debug.Log("HitBox collision detected"); // Добавлено для отладки
+                CmdChangeHealth(-swordDamage);
                 enemyArcController.hitObjectsDuringCurrentAttack.Add(other.gameObject);
             }
-            // else if (other.CompareTag("HitBoxChamber"))
-            // {
-            // 	if (enemyArcController.isAttacking)
-            // 	{
-            // 		if (attackFromRight != enemyArcController.attackFromRight)
-            // 		{
-            // 			enemyArcController.StopCoroutine(enemyArcController.SwordAttack());
-            // 			enemyArcController.isAttacking = false;
-            // 			enemyArcController.UpdateAttackIndicators();
+            else if (other.CompareTag("HitBoxChamber"))
+            {
+                Debug.Log("HitBoxChamber collision detected"); // Добавлено для отладки
 
-            // 			StartCoroutine(SwordAttack());
-            // 			hitObjectsDuringCurrentAttack.Add(other.gameObject);
-            // 		}
-            // 	}
-            // }
+                // Проверка на чембер: если меч врага касается хитбокса чембера, но не касается обычного хитбокса,
+                // и игрок начинает противоположную атаку в этот момент
+                if (isAttacking && attackFromRight != enemyArcController.attackFromRight)
+                {
+                    Debug.Log("Chamber detected"); // Добавлено для отладки
+
+                    // Чембер произошел, останавливаем атаку врага и продолжаем нашу атаку
+                    enemyArcController.StopCoroutine(enemyArcController.SwordAttack());
+                    enemyArcController.isAttacking = false;
+                    enemyArcController.UpdateAttackIndicators();
+
+                    // Изменяем цвет объекта игрока на желтый на секунду
+                    StartCoroutine(ChangeColorForChamber());
+                }
+            }
         }
     }
+
+
+
+    private IEnumerator ChangeColorForChamber()
+    {
+        // Получаем компонент SpriteRenderer объекта игрока
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            // Изменяем цвет на желтый
+            spriteRenderer.color = Color.yellow;
+
+            // Ждем секунду
+            yield return new WaitForSeconds(1f);
+
+            // Возвращаем обратно оригинальный цвет
+            spriteRenderer.color = Color.white;
+        }
+    }
+
+
+
+
+
 
     private void Awake()
     {
@@ -201,22 +229,21 @@ public class ArcController : NetworkBehaviour
 
     private IEnumerator SwordAttack()
     {
-
         if (sword == null) yield break;
 
         isAttacking = true;
         hitObjectsDuringCurrentAttack.Clear();
 
-        // ������������� ����� ����������� � ����������� �� ����������� �����
+        // Устанавливаем цвета индикаторов в зависимости от направления атаки
         if (attackFromRight)
         {
-            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% ������������
-            righto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% ������������
+            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% прозрачность
+            righto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% прозрачность
         }
         else
         {
-            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% ������������
-            righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% ������������
+            lefto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 0.5f); // 50% прозрачность
+            righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f); // 50% прозрачность
         }
 
         float angleStep = arcAngle / segments;
@@ -239,13 +266,14 @@ public class ArcController : NetworkBehaviour
             sword.transform.position = new Vector3(x, y, 0) + targetObject.transform.position;
             sword.transform.rotation = Quaternion.Euler(0, 0, (Mathf.Rad2Deg * segmentAngle) - 90f);
 
-            currentStep += attackSpeed;
+            currentStep += attackSpeed * Time.deltaTime; // Изменение здесь
             yield return null;
         }
 
         isAttacking = false;
         UpdateAttackIndicators();
     }
+
     [Command]
     public void CmdChangeHealth(float amount)
     {

@@ -479,7 +479,7 @@ MonoBehaviour:
   radius: 2
   segments: 50
   arcAngle: 90
-  attackSpeed: 0.1
+  attackSpeed: 10
   healthBar: {fileID: 8245152300185360153}
   maxHealth: 100
   swordDamage: 100
@@ -595,7 +595,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 6.958197, y: 6.958197, z: 6.958197}
+  m_LocalScale: {x: 10, y: 10, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8305800341861205735}
