@@ -6,6 +6,7 @@ TagManager:
   tags:
   - HitBox
   - HitBoxChamber
+  - HitBoxBlock
   layers:
   - Default
   - TransparentFX

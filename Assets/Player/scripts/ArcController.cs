@@ -16,10 +16,12 @@ public class ArcController : NetworkBehaviour
     public int segments = 50;
     public float arcAngle = 90f;
     public float attackSpeed = 1f;
+    public float backupAttackSpeed = 1f;
 
     private LineRenderer lineRenderer;
     private float startAngle;
     private float endAngle;
+    private float currentStep = 0f; //была локальной
 
     public GameObject healthBar;
     public float maxHealth = 100f;
@@ -31,7 +33,16 @@ public class ArcController : NetworkBehaviour
     private bool isAttacking = false;
 
     [SyncVar]
+    private bool isBlocking = false;
+
+    [SyncVar]
     private bool attackFromRight = true;
+
+    [SyncVar]
+    public bool isAIPlayer; //для тестов
+
+    [SyncVar]
+    private bool isBlocked = false; //для тестов
 
     [SyncVar]
     private float syncedArcAngle;
@@ -41,6 +52,7 @@ public class ArcController : NetworkBehaviour
 
     private HashSet<GameObject> hitObjectsDuringCurrentAttack;
 
+    private Coroutine swordAttacking; //Чтобы останавливать анимацию в 100 строке
     private void Start()
     {
         currentHealth = maxHealth;
@@ -73,23 +85,32 @@ public class ArcController : NetworkBehaviour
 
                 // Проверка на чембер: если меч врага касается хитбокса чембера, но не касается обычного хитбокса,
                 // и игрок начинает противоположную атаку в этот момент
-                if (isAttacking && attackFromRight != enemyArcController.attackFromRight)
+                if (isAttacking && attackFromRight == enemyArcController.attackFromRight) //Булевые равны, тк игроки смотрят зеркально 
                 {
                     Debug.Log("Chamber detected"); // Добавлено для отладки
-
-                    // Чембер произошел, останавливаем атаку врага и продолжаем нашу атаку
-                    enemyArcController.StopCoroutine(enemyArcController.SwordAttack());
-                    enemyArcController.isAttacking = false;
-                    enemyArcController.UpdateAttackIndicators();
-
-                    // Изменяем цвет объекта игрока на желтый на секунду
-                    StartCoroutine(ChangeColorForChamber());
+                    AttackStopped(enemyArcController);
+                }
+            }
+            else if (other.CompareTag("HitBoxBlock"))
+            {
+                if (isBlocking)
+                {
+                    AttackStopped(enemyArcController);
                 }
             }
         }
     }
 
-
+    private void AttackStopped(ArcController enemy) //метод для остановки и отката атаки 
+    {
+        Debug.Log("AttackStoped");
+        enemy.StopCoroutine(enemy.swordAttacking);
+        enemy.UpdateAttackIndicators();
+        enemy.isBlocked = true;
+        enemy.StartCoroutine(enemy.SwordBackup());
+        // Изменяем цвет объекта игрока на желтый на секунду
+        StartCoroutine(ChangeColorForChamber());
+    }
 
     private IEnumerator ChangeColorForChamber()
     {
@@ -109,10 +130,6 @@ public class ArcController : NetworkBehaviour
     }
 
 
-
-
-
-
     private void Awake()
     {
         lineRenderer = GetComponent<LineRenderer>();
@@ -120,40 +137,64 @@ public class ArcController : NetworkBehaviour
 
     private void Update()
     {
-        if (!isLocalPlayer)
+        if (!isAIPlayer) //чтобы тестить и проигрывать атаку на автомате, если это бот
         {
-            return;
-        }
-
-        if (!isAttacking)
-        {
-            if (Input.GetKeyDown(KeyCode.C))
+            if (!isLocalPlayer)
             {
-                CmdStartAttack(true);
+                return;
             }
-            else if (Input.GetKeyDown(KeyCode.Z))
+
+            if (!isAttacking)
+            {
+                if (Input.GetKeyDown(KeyCode.C))
+                {
+                    CmdStartAttack(true);
+                }
+                else if (Input.GetKeyDown(KeyCode.Z))
+                {
+                    CmdStartAttack(false);
+                }
+                else if (Input.GetKeyDown(KeyCode.F))
+                {
+                    CmdBlocking(true);
+                }
+                else if (Input.GetKeyUp(KeyCode.F))
+                {
+                    CmdBlocking(false);
+                }
+            }
+            if (Input.GetMouseButtonDown(0) && !isAttacking)
+            {
+                CmdStartAttack(attackFromRight);
+            }
+
+            Vector3 mousePosition = Input.mousePosition;
+            mousePosition = mainCamera.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, mainCamera.transform.position.y - targetObject.transform.position.y));
+
+            Vector2 direction = new Vector2(
+                mousePosition.x - targetObject.transform.position.x,
+                mousePosition.y - targetObject.transform.position.y
+            );
+
+            syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            CmdSyncArcAngle(syncedArcAngle);
+        }
+        else
+        {
+            if (!isAttacking && !isBlocked)
             {
                 CmdStartAttack(false);
             }
         }
-
-        if (Input.GetMouseButtonDown(0) && !isAttacking)
-        {
-            CmdStartAttack(attackFromRight);
-        }
-
-        Vector3 mousePosition = Input.mousePosition;
-        mousePosition = mainCamera.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, mainCamera.transform.position.y - targetObject.transform.position.y));
-
-        Vector2 direction = new Vector2(
-            mousePosition.x - targetObject.transform.position.x,
-            mousePosition.y - targetObject.transform.position.y
-        );
-
-        syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        CmdSyncArcAngle(syncedArcAngle);
     }
 
+    [Command]
+    public void CmdBlocking(bool isBlock)
+    {
+        isBlocking = isBlock;
+        if(isBlock) { sword.GetComponent<SpriteRenderer>().color = Color.blue; }
+        else { sword.GetComponent<SpriteRenderer>().color = Color.white; }
+    }
 
     [Command]
     public void CmdSyncArcAngle(float newArcAngle)
@@ -161,12 +202,12 @@ public class ArcController : NetworkBehaviour
         syncedArcAngle = newArcAngle;
     }
 
-    [Command]
+    //[Command] убрал на время тестов
     public void CmdStartAttack(bool attackFromRight)
     {
-        this.attackFromRight = attackFromRight;
-        isAttacking = true;
-        RpcStartAttack(attackFromRight);
+            this.attackFromRight = attackFromRight;
+            isAttacking = true;
+            RpcStartAttack(attackFromRight);
     }
 
     [ClientRpc]
@@ -175,7 +216,7 @@ public class ArcController : NetworkBehaviour
         this.attackFromRight = attackFromRight;
         isAttacking = true;
         UpdateAttackIndicators();
-        StartCoroutine(SwordAttack());
+        swordAttacking = StartCoroutine(SwordAttack());
     }
 
 
@@ -192,7 +233,24 @@ public class ArcController : NetworkBehaviour
             righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
         }
     }
+    private void SwordMoving(float angleStep, bool isFromRight, float duration)
+    {
+        float segmentAngle;
+        if (isFromRight)
+        {
+            segmentAngle = Mathf.Deg2Rad * (startAngle + currentStep * angleStep);      
+        }
+        else
+        {
+            segmentAngle = Mathf.Deg2Rad * (endAngle - currentStep * angleStep);
+        }
+        float x = Mathf.Cos(segmentAngle) * radius;
+        float y = Mathf.Sin(segmentAngle) * radius;
+        sword.transform.position = new Vector3(x, y, 0) + targetObject.transform.position;
+        sword.transform.rotation = Quaternion.Euler(0, 0, (Mathf.Rad2Deg * segmentAngle) - 90f);
 
+        currentStep += duration * Time.deltaTime; // Изменение здесь
+    }
     private void LateUpdate()
     {
         UpdateArc();
@@ -225,8 +283,21 @@ public class ArcController : NetworkBehaviour
             lineRenderer.SetPosition(i, new Vector3(x, y, 0) + targetPosition);
         }
     }
+    private IEnumerator SwordBackup()
+    {
+        if (sword == null) yield break;
+        float angleStep = arcAngle / segments;
 
-
+        //while (currentStep <= segments)
+        //{
+        //    //SwordMoving(angleStep, !attackFromRight, backupAttackSpeed);
+        //    yield return null;
+        //}
+        currentStep = 0;
+        yield return new WaitForSeconds(0.5f);
+        isAttacking = false;
+        isBlocked = false;
+    }
     private IEnumerator SwordAttack()
     {
         if (sword == null) yield break;
@@ -247,29 +318,30 @@ public class ArcController : NetworkBehaviour
         }
 
         float angleStep = arcAngle / segments;
-        float currentStep = 0f;
 
         while (currentStep <= segments)
         {
-            float segmentAngle;
-            if (attackFromRight)
-            {
-                segmentAngle = Mathf.Deg2Rad * (startAngle + currentStep * angleStep);
-            }
-            else
-            {
-                segmentAngle = Mathf.Deg2Rad * (endAngle - currentStep * angleStep);
-            }
+            //float segmentAngle;
+            //if (attackFromRight)
+            //{
+            //    segmentAngle = Mathf.Deg2Rad * (startAngle + currentStep * angleStep);
+            //}
+            //else
+            //{
+            //    segmentAngle = Mathf.Deg2Rad * (endAngle - currentStep * angleStep);
+            //}
 
-            float x = Mathf.Cos(segmentAngle) * radius;
-            float y = Mathf.Sin(segmentAngle) * radius;
-            sword.transform.position = new Vector3(x, y, 0) + targetObject.transform.position;
-            sword.transform.rotation = Quaternion.Euler(0, 0, (Mathf.Rad2Deg * segmentAngle) - 90f);
+            //float x = Mathf.Cos(segmentAngle) * radius;
+            //float y = Mathf.Sin(segmentAngle) * radius;
+            //sword.transform.position = new Vector3(x, y, 0) + targetObject.transform.position;
+            //sword.transform.rotation = Quaternion.Euler(0, 0, (Mathf.Rad2Deg * segmentAngle) - 90f);
 
-            currentStep += attackSpeed * Time.deltaTime; // Изменение здесь
+            //currentStep += attackSpeed * Time.deltaTime; // Изменение здесь
+
+            SwordMoving(angleStep, attackFromRight, attackSpeed); //Сделал метод, который двигает меч, тк данный блок нужен будет для отката атаки
             yield return null;
         }
-
+        currentStep = 0;
         isAttacking = false;
         UpdateAttackIndicators();
     }
@@ -285,6 +357,4 @@ public class ArcController : NetworkBehaviour
             // �������� ����� ������ ������
         }
     }
-
-
 }
