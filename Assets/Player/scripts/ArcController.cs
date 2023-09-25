@@ -9,6 +9,10 @@ public class ArcController : NetworkBehaviour
     public GameObject lefto;
     public GameObject righto;
 
+    public GameObject leftSwing;
+    public GameObject rightSwing;
+
+
     public GameObject targetObject;
     public Camera mainCamera;
     public GameObject sword;
@@ -25,6 +29,37 @@ public class ArcController : NetworkBehaviour
 
     public GameObject healthBar;
     public float maxHealth = 100f;
+
+    [ClientRpc]
+    public void RpcUpdateAttackIndicators()
+    {
+        UpdateAttackIndicators();
+    }
+
+    [Command]
+    public void CmdCancelAttack()
+    {
+        RpcCancelAttack();
+    }
+
+    [ClientRpc]
+    public void RpcCancelAttack()
+    {
+        CancelAttack();
+    }
+
+    [Command]
+    public void CmdAttackStopped(ArcController enemy)
+    {
+        RpcAttackStopped(enemy);
+    }
+
+    [ClientRpc]
+    public void RpcAttackStopped(ArcController enemy)
+    {
+        AttackStopped(enemy);
+    }
+
 
     [SyncVar]
     private float currentHealth;
@@ -49,6 +84,11 @@ public class ArcController : NetworkBehaviour
 
     [SerializeField]
     private float swordDamage = 10f; // ���� �� ����, ������ ����� ������������� � ����������
+
+    [Header("Attack Settings")]
+    public float windupTime = 1f; // Время замаха
+    [SyncVar]
+    private bool isWindingUp = false; // Проверка, находится ли игрок в состоянии замаха
 
     private HashSet<GameObject> hitObjectsDuringCurrentAttack;
 
@@ -144,15 +184,17 @@ public class ArcController : NetworkBehaviour
                 return;
             }
 
-            if (!isAttacking)
+            if (!isAttacking && !isWindingUp)
             {
                 if (Input.GetKeyDown(KeyCode.C))
                 {
-                    CmdStartAttack(true);
+                    attackFromRight = true;
+                    UpdateAttackIndicators();
                 }
                 else if (Input.GetKeyDown(KeyCode.Z))
                 {
-                    CmdStartAttack(false);
+                    attackFromRight = false;
+                    UpdateAttackIndicators();
                 }
                 else if (Input.GetKeyDown(KeyCode.F))
                 {
@@ -163,9 +205,17 @@ public class ArcController : NetworkBehaviour
                     CmdBlocking(false);
                 }
             }
-            if (Input.GetMouseButtonDown(0) && !isAttacking)
+
+            if (Input.GetMouseButtonDown(0) && !isAttacking && !isWindingUp)
             {
                 CmdStartAttack(attackFromRight);
+                UpdateAttackIndicators(); // Явно обновляем индикаторы на клиенте, который начал атаку
+            }
+
+
+            if (isWindingUp && Input.GetKeyDown(KeyCode.X)) // Нажмите X, чтобы отменить атаку во время замаха
+            {
+                CancelAttack();
             }
 
             Vector3 mousePosition = Input.mousePosition;
@@ -188,11 +238,50 @@ public class ArcController : NetworkBehaviour
         }
     }
 
+    public void CancelAttack()
+    {
+        if (isWindingUp)
+        {
+            StopCoroutine(WindupAttack());
+            isWindingUp = false;
+        }
+
+        if (isAttacking)
+        {
+            if (swordAttacking != null)
+            {
+                StopCoroutine(swordAttacking);
+            }
+            isAttacking = false;
+        }
+
+        UpdateAttackIndicators();
+    }
+
+
+    [Command]
+    public void CmdStartAttack(bool attackFromRight)
+    {
+        Debug.Log("CmdStartAttack called for " + (isAIPlayer ? "AI" : "Player"));
+        this.attackFromRight = attackFromRight;
+        isWindingUp = true;
+        RpcUpdateAttackIndicators(); // Обновляем индикаторы на всех клиентах
+        RpcStartWindupAttack();
+    }
+
+    [ClientRpc]
+    public void RpcStartWindupAttack()
+    {
+        StartCoroutine(WindupAttack());
+    }
+
+
+
     [Command]
     public void CmdBlocking(bool isBlock)
     {
         isBlocking = isBlock;
-        if(isBlock) { sword.GetComponent<SpriteRenderer>().color = Color.blue; }
+        if (isBlock) { sword.GetComponent<SpriteRenderer>().color = Color.blue; }
         else { sword.GetComponent<SpriteRenderer>().color = Color.white; }
     }
 
@@ -202,13 +291,13 @@ public class ArcController : NetworkBehaviour
         syncedArcAngle = newArcAngle;
     }
 
-    //[Command] убрал на время тестов
-    public void CmdStartAttack(bool attackFromRight)
-    {
-            this.attackFromRight = attackFromRight;
-            isAttacking = true;
-            RpcStartAttack(attackFromRight);
-    }
+    //[Command] 
+    //public void CmdStartAttack(bool attackFromRight)
+    //{
+    //        this.attackFromRight = attackFromRight;
+    //        isAttacking = true;
+    //        RpcStartAttack(attackFromRight);
+    //}
 
     [ClientRpc]
     public void RpcStartAttack(bool attackFromRight)
@@ -219,26 +308,30 @@ public class ArcController : NetworkBehaviour
         swordAttacking = StartCoroutine(SwordAttack());
     }
 
-
     private void UpdateAttackIndicators()
     {
         if (attackFromRight)
         {
             lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
             righto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 1);
+            rightSwing.GetComponent<SpriteRenderer>().color = isWindingUp ? Color.blue : Color.white; // Изменено местами
+            leftSwing.GetComponent<SpriteRenderer>().color = Color.white; // Изменено местами
         }
         else
         {
             lefto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 1);
             righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
+            leftSwing.GetComponent<SpriteRenderer>().color = isWindingUp ? Color.blue : Color.white; // Изменено местами
+            rightSwing.GetComponent<SpriteRenderer>().color = Color.white; // Изменено местами
         }
     }
+
     private void SwordMoving(float angleStep, bool isFromRight, float duration)
     {
         float segmentAngle;
         if (isFromRight)
         {
-            segmentAngle = Mathf.Deg2Rad * (startAngle + currentStep * angleStep);      
+            segmentAngle = Mathf.Deg2Rad * (startAngle + currentStep * angleStep);
         }
         else
         {
@@ -283,6 +376,23 @@ public class ArcController : NetworkBehaviour
             lineRenderer.SetPosition(i, new Vector3(x, y, 0) + targetPosition);
         }
     }
+
+    private IEnumerator WindupAttack()
+    {
+        // Устанавливаем индикаторы замаха
+        RpcUpdateAttackIndicators(); // Обновляем индикаторы на всех клиентах
+
+        yield return new WaitForSeconds(windupTime);
+
+        if (isWindingUp) // Добавьте эту проверку
+        {
+            isWindingUp = false;
+            isAttacking = true;
+            RpcStartAttack(attackFromRight);
+            RpcUpdateAttackIndicators(); // Обновляем индикаторы на всех клиентах после завершения замаха
+        }
+    }
+
     private IEnumerator SwordBackup()
     {
         if (sword == null) yield break;
@@ -300,7 +410,7 @@ public class ArcController : NetworkBehaviour
     }
     private IEnumerator SwordAttack()
     {
-        if (sword == null) yield break;
+        if (!isAttacking || sword == null) yield break;
 
         isAttacking = true;
         hitObjectsDuringCurrentAttack.Clear();
@@ -319,7 +429,7 @@ public class ArcController : NetworkBehaviour
 
         float angleStep = arcAngle / segments;
 
-        while (currentStep <= segments)
+        while (currentStep <= segments && isAttacking)
         {
             //float segmentAngle;
             //if (attackFromRight)
