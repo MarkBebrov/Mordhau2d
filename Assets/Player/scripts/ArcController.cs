@@ -13,6 +13,7 @@ public class ArcController : NetworkBehaviour
     public GameObject rightSwing;
 
 
+
     public GameObject targetObject;
     public Camera mainCamera;
     public GameObject sword;
@@ -29,6 +30,14 @@ public class ArcController : NetworkBehaviour
 
     public GameObject healthBar;
     public float maxHealth = 100f;
+
+    [Header("Block Settings")]
+    public float blockCooldown = 2f; // Время ожидания после блокирования
+    private bool canBlock = true; // Переменная для проверки, может ли игрок блокировать
+    public float maxBlockTime = 3f; // Максимальное время блокирования
+    private float blockTimer = 0f; // Таймер для блокирования
+
+
 
     [ClientRpc]
     public void RpcUpdateAttackIndicators()
@@ -59,6 +68,10 @@ public class ArcController : NetworkBehaviour
     {
         AttackStopped(enemy);
     }
+
+    private Coroutine blockCooldownCoroutine;
+
+
 
 
     [SyncVar]
@@ -210,11 +223,11 @@ public class ArcController : NetworkBehaviour
                     attackFromRight = false;
                     UpdateAttackIndicators();
                 }
-                else if (Input.GetKeyDown(KeyCode.F))
+                else if (Input.GetKeyDown(KeyCode.F) && blockTimer < maxBlockTime)
                 {
                     CmdBlocking(true);
                 }
-                else if (Input.GetKeyUp(KeyCode.F))
+                else if (Input.GetKeyUp(KeyCode.F) || blockTimer >= maxBlockTime)
                 {
                     CmdBlocking(false);
                 }
@@ -225,7 +238,6 @@ public class ArcController : NetworkBehaviour
                 CmdStartAttack(attackFromRight);
                 UpdateAttackIndicators(); // Явно обновляем индикаторы на клиенте, который начал атаку
             }
-
 
             if (isWindingUp && Input.GetKeyDown(KeyCode.X)) // Нажмите X, чтобы отменить атаку во время замаха
             {
@@ -242,6 +254,16 @@ public class ArcController : NetworkBehaviour
 
             syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             CmdSyncArcAngle(syncedArcAngle);
+
+            // Обновляем таймер блокирования, если блок активен
+            if (sword.GetComponent<SpriteRenderer>().color == Color.blue)
+            {
+                blockTimer += Time.deltaTime;
+            }
+            else
+            {
+                blockTimer = 0f;
+            }
         }
         else
         {
@@ -251,6 +273,8 @@ public class ArcController : NetworkBehaviour
             }
         }
     }
+
+
 
     public void CancelAttack()
     {
@@ -278,16 +302,21 @@ public class ArcController : NetworkBehaviour
     {
         Debug.Log("CmdStartAttack called for " + (isAIPlayer ? "AI" : "Player"));
         this.attackFromRight = attackFromRight;
-        isWindingUp = true;
-        RpcUpdateAttackIndicators(); // Обновляем индикаторы на всех клиентах
-        RpcStartWindupAttack();
-        if (isInChamberHit)
+
+        if (isInChamberHit && attackFromRight == enemyArcController.attackFromRight && enemyArcController != null)
         {
-            if (attackFromRight == enemyArcController.attackFromRight && enemyArcController != null) //Булевые равны, тк игроки смотрят зеркально 
-            {
-                Debug.Log("Chamber detected"); // Добавлено для отладки
-                AttackStopped(enemyArcController);
-            }
+            Debug.Log("Chamber detected");
+            AttackStopped(enemyArcController);
+            isWindingUp = false;
+            isAttacking = true;
+            RpcStartAttack(attackFromRight);
+            RpcUpdateAttackIndicators();
+        }
+        else
+        {
+            isWindingUp = true;
+            RpcUpdateAttackIndicators();
+            RpcStartWindupAttack();
         }
     }
 
@@ -299,17 +328,33 @@ public class ArcController : NetworkBehaviour
 
 
 
+
+
     [Command]
     public void CmdBlocking(bool isBlock)
     {
-        if (isBlock)
+        if (isBlock && canBlock)
         {
             sword.GetComponent<SpriteRenderer>().color = Color.blue;
             if (isInBlockHit)
                 AttackStopped(enemyArcController);
+
+            // Если корутина уже запущена, останавливаем её
+            if (blockCooldownCoroutine != null)
+            {
+                StopCoroutine(blockCooldownCoroutine);
+            }
+
+            blockCooldownCoroutine = StartCoroutine(BlockCooldownRoutine());
         }
-        else { sword.GetComponent<SpriteRenderer>().color = Color.white; }
+        else
+        {
+            sword.GetComponent<SpriteRenderer>().color = Color.white;
+        }
     }
+
+
+
 
     [Command]
     public void CmdSyncArcAngle(float newArcAngle)
@@ -403,6 +448,14 @@ public class ArcController : NetworkBehaviour
         }
     }
 
+    private IEnumerator BlockCooldownRoutine()
+    {
+        canBlock = false;
+        yield return new WaitForSeconds(blockCooldown);
+        canBlock = true;
+    }
+
+
     private IEnumerator WindupAttack()
     {
         // Устанавливаем индикаторы замаха
@@ -418,6 +471,8 @@ public class ArcController : NetworkBehaviour
             RpcUpdateAttackIndicators(); // Обновляем индикаторы на всех клиентах после завершения замаха
         }
     }
+
+
 
     private IEnumerator SwordBackup()
     {
