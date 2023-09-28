@@ -14,4 +14,8 @@ public class SwordCollisionHandler : MonoBehaviour
     {
         other.transform.parent?.Find("ArcObject")?.gameObject.GetComponent<ArcController>().OnSwordHit(other, _arcController);
     }
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        other.transform.parent?.Find("ArcObject")?.gameObject.GetComponent<ArcController>().OnSwordExitFromTrigger(other);
+    }
 }

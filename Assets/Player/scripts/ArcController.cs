@@ -80,6 +80,12 @@ public class ArcController : NetworkBehaviour
     private bool isBlocked = false; //для тестов
 
     [SyncVar]
+    private bool isInChamberHit = false;
+
+    [SyncVar]
+    private bool isInBlockHit = false;
+
+    [SyncVar]
     private float syncedArcAngle;
 
     [SerializeField]
@@ -93,6 +99,7 @@ public class ArcController : NetworkBehaviour
     private HashSet<GameObject> hitObjectsDuringCurrentAttack;
 
     private Coroutine swordAttacking; //Чтобы останавливать анимацию в 100 строке
+    private ArcController enemyArcController;
     private void Start()
     {
         currentHealth = maxHealth;
@@ -113,6 +120,7 @@ public class ArcController : NetworkBehaviour
 
         if (enemyArcController != null && enemyArcController.isAttacking && !enemyArcController.hitObjectsDuringCurrentAttack.Contains(other.gameObject))
         {
+            this.enemyArcController = enemyArcController;
             if (other.CompareTag("HitBox"))
             {
                 Debug.Log("HitBox collision detected"); // Добавлено для отладки
@@ -122,22 +130,40 @@ public class ArcController : NetworkBehaviour
             else if (other.CompareTag("HitBoxChamber"))
             {
                 Debug.Log("HitBoxChamber collision detected"); // Добавлено для отладки
-
+                isInChamberHit = true;
                 // Проверка на чембер: если меч врага касается хитбокса чембера, но не касается обычного хитбокса,
                 // и игрок начинает противоположную атаку в этот момент
-                if (isAttacking && attackFromRight == enemyArcController.attackFromRight) //Булевые равны, тк игроки смотрят зеркально 
-                {
-                    Debug.Log("Chamber detected"); // Добавлено для отладки
-                    AttackStopped(enemyArcController);
-                }
+                //if (isAttacking && attackFromRight == enemyArcController.attackFromRight) //Булевые равны, тк игроки смотрят зеркально 
+                //{
+                //    Debug.Log("Chamber detected"); // Добавлено для отладки
+                //    AttackStopped(enemyArcController);
+                //}
             }
             else if (other.CompareTag("HitBoxBlock"))
             {
-                if (isBlocking)
-                {
-                    AttackStopped(enemyArcController);
-                }
+                isInBlockHit = true;
+                //if (isBlocking)
+                //{
+                //    AttackStopped(enemyArcController);
+                //}
             }
+        }
+    }
+    public void OnSwordExitFromTrigger(Collider2D other)
+    {
+        if (enemyArcController != null)
+        {
+            if (other.CompareTag("HitBoxChamber"))
+            {
+                isInChamberHit = false;
+                enemyArcController = null;
+            }
+            else if (other.CompareTag("HitBoxBlock"))
+            {
+                isInBlockHit = false;
+                enemyArcController = null;
+            }
+
         }
     }
 
@@ -259,14 +285,20 @@ public class ArcController : NetworkBehaviour
     }
 
 
-    [Command]
+    //[Command]
     public void CmdStartAttack(bool attackFromRight)
     {
-        Debug.Log("CmdStartAttack called for " + (isAIPlayer ? "AI" : "Player"));
         this.attackFromRight = attackFromRight;
-        isWindingUp = true;
-        RpcUpdateAttackIndicators(); // Обновляем индикаторы на всех клиентах
-        RpcStartWindupAttack();
+        isAttacking = true;
+        RpcStartAttack(attackFromRight);
+        if (isInChamberHit)
+        {
+            if (attackFromRight == enemyArcController.attackFromRight && enemyArcController != null) //Булевые равны, тк игроки смотрят зеркально 
+            {
+                Debug.Log("Chamber detected"); // Добавлено для отладки
+                AttackStopped(enemyArcController);
+            }
+        }
     }
 
     [ClientRpc]
@@ -280,8 +312,12 @@ public class ArcController : NetworkBehaviour
     [Command]
     public void CmdBlocking(bool isBlock)
     {
-        isBlocking = isBlock;
-        if (isBlock) { sword.GetComponent<SpriteRenderer>().color = Color.blue; }
+        if (isBlock)
+        {
+            sword.GetComponent<SpriteRenderer>().color = Color.blue;
+            if(isInBlockHit)
+                AttackStopped(enemyArcController);
+        }
         else { sword.GetComponent<SpriteRenderer>().color = Color.white; }
     }
 
