@@ -11,7 +11,7 @@ public class ArcController : NetworkBehaviour
 
     public GameObject leftSwing;
     public GameObject rightSwing;
-
+    public GameObject CentralSwing;
 
 
     public GameObject targetObject;
@@ -36,6 +36,17 @@ public class ArcController : NetworkBehaviour
     private bool canBlock = true; // Переменная для проверки, может ли игрок блокировать
     public float maxBlockTime = 3f; // Максимальное время блокирования
     private float blockTimer = 0f; // Таймер для блокирования
+
+    [Header("Thrust Attack Settings")]
+    public float thrustDistance = 3f; // Расстояние колющей атаки
+    public float thrustSpeed = 2f; // Скорость колющей атаки
+    private bool isThrusting = false; // Проверка, выполняется ли колющая атака
+
+    [Header("Thrust Windup Settings")]
+    public float thrustWindupTime = 1f; // Время замаха для колющей атаки
+    [SyncVar]
+    private bool isThrustWindingUp = false; // Проверка, находится ли игрок в состоянии замаха для колющей атаки
+
 
 
 
@@ -204,44 +215,47 @@ public class ArcController : NetworkBehaviour
 
     private void Update()
     {
-        if (!isAIPlayer) //чтобы тестить и проигрывать атаку на автомате, если это бот
+        if (!isAIPlayer)
         {
             if (!isLocalPlayer)
             {
                 return;
             }
 
-            if (!isAttacking && !isWindingUp)
+            if (!isAttacking && !isWindingUp && !isThrusting && !isThrustWindingUp)
             {
-                if (Input.GetKeyDown(KeyCode.C))
-                {
-                    attackFromRight = true;
-                    UpdateAttackIndicators();
-                }
-                else if (Input.GetKeyDown(KeyCode.Z))
+                if (Input.GetMouseButtonDown(0))
                 {
                     attackFromRight = false;
+                    CmdStartAttack(attackFromRight);
                     UpdateAttackIndicators();
+                }
+                else if (Input.GetMouseButtonDown(1))
+                {
+                    attackFromRight = true;
+                    CmdStartAttack(attackFromRight);
+                    UpdateAttackIndicators();
+                }
+                else if (Input.GetAxis("Mouse ScrollWheel") > 0f)
+                {
+                    StartCoroutine(ThrustAttack());
                 }
                 else if (Input.GetKeyDown(KeyCode.F) && blockTimer < maxBlockTime)
                 {
                     CmdBlocking(true);
                 }
-                else if (Input.GetKeyUp(KeyCode.F) || blockTimer >= maxBlockTime)
-                {
-                    CmdBlocking(false);
-                }
             }
 
-            if (Input.GetMouseButtonDown(0) && !isAttacking && !isWindingUp)
-            {
-                CmdStartAttack(attackFromRight);
-                UpdateAttackIndicators(); // Явно обновляем индикаторы на клиенте, который начал атаку
-            }
-
-            if (isWindingUp && Input.GetKeyDown(KeyCode.X)) // Нажмите X, чтобы отменить атаку во время замаха
+            if (isWindingUp && Input.GetKeyDown(KeyCode.X))
             {
                 CancelAttack();
+            }
+
+            if (isThrustWindingUp && Input.GetKeyDown(KeyCode.X))
+            {
+                StopCoroutine(ThrustAttack());
+                isThrustWindingUp = false;
+                CentralSwing.GetComponent<SpriteRenderer>().color = Color.white;
             }
 
             Vector3 mousePosition = Input.mousePosition;
@@ -255,7 +269,6 @@ public class ArcController : NetworkBehaviour
             syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             CmdSyncArcAngle(syncedArcAngle);
 
-            // Обновляем таймер блокирования, если блок активен
             if (sword.GetComponent<SpriteRenderer>().color == Color.blue)
             {
                 blockTimer += Time.deltaTime;
@@ -273,6 +286,8 @@ public class ArcController : NetworkBehaviour
             }
         }
     }
+
+
 
 
 
@@ -346,6 +361,7 @@ public class ArcController : NetworkBehaviour
             }
 
             blockCooldownCoroutine = StartCoroutine(BlockCooldownRoutine());
+            StartCoroutine(BlockDurationRoutine());
         }
         else
         {
@@ -353,6 +369,66 @@ public class ArcController : NetworkBehaviour
         }
     }
 
+    private IEnumerator BlockDurationRoutine()
+    {
+        yield return new WaitForSeconds(maxBlockTime);
+        CmdBlocking(false);
+    }
+
+    private IEnumerator ThrustAttack()
+    {
+        isThrustWindingUp = true;
+        CentralSwing.GetComponent<SpriteRenderer>().color = Color.blue;
+
+        yield return new WaitForSeconds(thrustWindupTime);
+
+        if (isThrustWindingUp)
+        {
+            isThrustWindingUp = false;
+            isThrusting = true;
+            CentralSwing.GetComponent<SpriteRenderer>().color = Color.white;
+
+            float middleAngle = Mathf.Deg2Rad * syncedArcAngle;
+            float startX = Mathf.Cos(middleAngle) * radius;
+            float startY = Mathf.Sin(middleAngle) * radius;
+            sword.transform.position = new Vector3(startX, startY, 0) + targetObject.transform.position;
+            sword.transform.rotation = Quaternion.Euler(0, 0, (Mathf.Rad2Deg * middleAngle) - 90f);
+
+            Vector3 originalPosition = sword.transform.position;
+            Vector3 targetPosition = originalPosition + sword.transform.up * thrustDistance;
+
+            float journeyLength = Vector3.Distance(originalPosition, targetPosition);
+            float startTime = Time.time;
+
+            float distanceCovered = 0;
+            while (distanceCovered < journeyLength)
+            {
+                originalPosition = new Vector3(startX, startY, 0) + targetObject.transform.position;
+                targetPosition = originalPosition + sword.transform.up * thrustDistance;
+
+                float fracJourney = distanceCovered / journeyLength;
+                sword.transform.position = Vector3.Lerp(originalPosition, targetPosition, fracJourney);
+                distanceCovered = (Time.time - startTime) * thrustSpeed;
+                yield return null;
+            }
+
+            sword.transform.position = targetPosition;
+
+            while (distanceCovered > 0)
+            {
+                originalPosition = new Vector3(startX, startY, 0) + targetObject.transform.position;
+                targetPosition = originalPosition + sword.transform.up * thrustDistance;
+
+                float fracJourney = distanceCovered / journeyLength;
+                sword.transform.position = Vector3.Lerp(originalPosition, targetPosition, fracJourney);
+                distanceCovered -= (Time.time - startTime) * thrustSpeed;
+                yield return null;
+            }
+
+            sword.transform.position = originalPosition;
+            isThrusting = false;
+        }
+    }
 
 
 
