@@ -65,6 +65,7 @@ public class ArcController : NetworkBehaviour
     [ClientRpc]
     public void RpcCancelAttack()
     {
+        isWindingUp = false;
         CancelAttack();
     }
 
@@ -112,13 +113,17 @@ public class ArcController : NetworkBehaviour
     [SyncVar]
     private bool isInBlockHit = false;
 
+    [SyncVar]
+    private bool isInHitBox = false;
+
     [SerializeField]
     private float swordDamage = 10f; // ���� �� ����, ������ ����� ������������� � ����������
 
     [Header("Attack Settings")]
     public float windupTime = 1f; // Время замаха
+
     [SyncVar]
-    private bool isWindingUp = false; // Проверка, находится ли игрок в состоянии замаха
+    private bool isWindingUp = false;// Проверка, находится ли игрок в состоянии замаха
 
     private HashSet<GameObject> hitObjectsDuringCurrentAttack;
 
@@ -150,6 +155,7 @@ public class ArcController : NetworkBehaviour
             {
                 Debug.Log("HitBox collision detected"); // Добавлено для отладки
                 CmdChangeHealth(-swordDamage);
+                isInHitBox = true;
                 enemyArcController.hitObjectsDuringCurrentAttack.Add(other.gameObject);
             }
             else if (other.CompareTag("HitBoxChamber"))
@@ -175,6 +181,10 @@ public class ArcController : NetworkBehaviour
             else if (other.CompareTag("HitBoxBlock"))
             {
                 isInBlockHit = false;
+            }
+            else if (other.CompareTag("HitBox"))
+            {
+                isInHitBox = false; 
             }
 
         }
@@ -248,7 +258,7 @@ public class ArcController : NetworkBehaviour
 
             if (isWindingUp && Input.GetKeyDown(KeyCode.X))
             {
-                CancelAttack();
+                CmdCancelAttack();
             }
 
             if (isThrustWindingUp && Input.GetKeyDown(KeyCode.X))
@@ -288,15 +298,11 @@ public class ArcController : NetworkBehaviour
     }
 
 
-
-
-
     public void CancelAttack()
     {
         if (isWindingUp)
         {
             StopCoroutine(WindupAttack());
-            isWindingUp = false;
         }
 
         if (isAttacking)
@@ -311,44 +317,47 @@ public class ArcController : NetworkBehaviour
         UpdateAttackIndicators();
     }
 
-
-    //[Command]
+    [ClientRpc]
+    private void RpcSetAttackState(bool isAttacking)
+    {
+        this.isAttacking = isAttacking;
+    }
+    [Command]
     public void CmdStartAttack(bool attackFromRight)
     {
         Debug.Log("CmdStartAttack called for " + (isAIPlayer ? "AI" : "Player"));
         this.attackFromRight = attackFromRight;
 
-        if (isInChamberHit && attackFromRight == enemyArcController.attackFromRight && enemyArcController != null)
+        if (isInChamberHit && attackFromRight == enemyArcController.attackFromRight && enemyArcController != null && !isInHitBox)
         {
             Debug.Log("Chamber detected");
             AttackStopped(enemyArcController);
-            isWindingUp = false;
-            isAttacking = true;
+            RpcSetWindingUp(false);
             RpcStartAttack(attackFromRight);
             RpcUpdateAttackIndicators();
         }
         else
         {
-            isWindingUp = true;
+            isWindingUp = true;       
+            RpcStartWindupAttack(attackFromRight);
             RpcUpdateAttackIndicators();
-            RpcStartWindupAttack();
         }
     }
 
     [ClientRpc]
-    public void RpcStartWindupAttack()
+    public void RpcStartWindupAttack(bool attackFromRight)
     {
+        this.attackFromRight = attackFromRight;
+        isWindingUp = true;
         StartCoroutine(WindupAttack());
     }
-
-
 
 
 
     [Command]
     public void CmdBlocking(bool isBlock)
     {
-        if (isBlock && canBlock)
+        if (isBlock && canBlock && !isInHitBox)
         {
             sword.GetComponent<SpriteRenderer>().color = Color.blue;
             if (isInBlockHit)
@@ -454,7 +463,11 @@ public class ArcController : NetworkBehaviour
         UpdateAttackIndicators();
         swordAttacking = StartCoroutine(SwordAttack());
     }
-
+    [ClientRpc]
+    private void RpcSetWindingUp(bool isWindingUp)
+    {
+        this.isWindingUp = isWindingUp;
+    }
     private void UpdateAttackIndicators()
     {
         if (attackFromRight)
@@ -531,7 +544,6 @@ public class ArcController : NetworkBehaviour
         canBlock = true;
     }
 
-
     private IEnumerator WindupAttack()
     {
         // Устанавливаем индикаторы замаха
@@ -541,6 +553,7 @@ public class ArcController : NetworkBehaviour
 
         if (isWindingUp) // Добавьте эту проверку
         {
+            RpcSetWindingUp(false);
             isWindingUp = false;
             isAttacking = true;
             RpcStartAttack(attackFromRight);
