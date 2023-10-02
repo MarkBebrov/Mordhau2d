@@ -13,6 +13,10 @@ public class PlayerMovement : NetworkBehaviour
     private Vector2 movement;
     private NetworkIdentity networkIdentity;
 
+    private bool isDirectionalMovement = false; // Переменная для проверки режима движения
+    [SerializeField] private float backwardSpeed = 2.5f; // Скорость движения назад
+    [SerializeField] private float sideStepSpeed = 3f; // Скорость движения вбок
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -24,7 +28,6 @@ public class PlayerMovement : NetworkBehaviour
         return movement;
     }
 
-
     private void Update()
     {
         if (!networkIdentity.isOwned)
@@ -32,18 +35,39 @@ public class PlayerMovement : NetworkBehaviour
             return;
         }
 
-        float moveX = Input.GetAxis("Horizontal");
-        float moveY = Input.GetAxis("Vertical");
-
-        movement = new Vector2(moveX, moveY);
-
-        if (Input.GetKey(KeyCode.LeftShift))
+        if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
-            movement = movement.normalized * runSpeed;
+            isDirectionalMovement = !isDirectionalMovement; // Переключение режима движения
+        }
+
+        float moveX = Input.GetAxisRaw("Horizontal");
+        float moveY = Input.GetAxisRaw("Vertical");
+
+        if (isDirectionalMovement)
+        {
+            Vector2 directionToMouse = (Vector2)Camera.main.ScreenToWorldPoint(Input.mousePosition) - rb.position;
+            directionToMouse.Normalize();
+
+            Vector2 forwardMovement = Vector2.zero;
+            if (moveY > 0) // Движение вперед
+            {
+                forwardMovement = moveY * directionToMouse;
+            }
+            else if (moveY < 0) // Движение назад
+            {
+                forwardMovement = moveY * backwardSpeed * directionToMouse;
+            }
+
+            Vector2 perpendicular = new Vector2(directionToMouse.y, -directionToMouse.x); // Инвертированное перпендикулярное направление
+            Vector2 sideMovement = moveX * sideStepSpeed * perpendicular;
+
+            movement = (forwardMovement + sideMovement).normalized;
+            movement *= (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed);
         }
         else
         {
-            movement = movement.normalized * walkSpeed;
+            movement = new Vector2(moveX, moveY).normalized;
+            movement *= (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed);
         }
     }
 
@@ -52,20 +76,6 @@ public class PlayerMovement : NetworkBehaviour
         if (!networkIdentity.isOwned)
         {
             return;
-        }
-
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveY = Input.GetAxisRaw("Vertical");
-
-        movement = new Vector2(moveX, moveY);
-
-        if (Input.GetKey(KeyCode.LeftShift))
-        {
-            movement = movement.normalized * runSpeed;
-        }
-        else
-        {
-            movement = movement.normalized * walkSpeed;
         }
 
         MoveCharacter();

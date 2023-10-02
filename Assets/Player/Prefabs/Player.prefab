@@ -319,6 +319,8 @@ MonoBehaviour:
   syncInterval: 0
   walkSpeed: 5
   runSpeed: 10
+  backwardSpeed: 2.5
+  sideStepSpeed: 3
 --- !u!1 &946446399811186537
 GameObject:
   m_ObjectHideFlags: 0
@@ -1468,7 +1470,7 @@ GameObject:
   - component: {fileID: 1065112036893058774}
   m_Layer: 0
   m_Name: Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
