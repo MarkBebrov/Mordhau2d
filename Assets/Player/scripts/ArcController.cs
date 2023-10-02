@@ -6,12 +6,15 @@ using System.Collections.Generic;
 [RequireComponent(typeof(LineRenderer))]
 public class ArcController : NetworkBehaviour
 {
+
+    public PlayerMovement playerMovement;
     public GameObject lefto;
     public GameObject righto;
 
     public GameObject leftSwing;
     public GameObject rightSwing;
     public GameObject CentralSwing;
+
 
 
     public GameObject targetObject;
@@ -46,6 +49,13 @@ public class ArcController : NetworkBehaviour
     public float thrustWindupTime = 1f; // Время замаха для колющей атаки
     [SyncVar]
     private bool isThrustWindingUp = false; // Проверка, находится ли игрок в состоянии замаха для колющей атаки
+
+    [Header("Stamina Settings")]
+    public float maxStamina = 100f;
+    [SyncVar]
+    private float currentStamina;
+    public GameObject staminaBar;
+    private float inactivityTimer = 0f;
 
 
 
@@ -135,7 +145,44 @@ public class ArcController : NetworkBehaviour
         currentHealth = maxHealth;
         UpdateHealthBar();
         hitObjectsDuringCurrentAttack = new HashSet<GameObject>();
+        currentStamina = maxStamina;
+        UpdateStaminaBar();
+        playerMovement = GetComponentInParent<PlayerMovement>();
+
+
     }
+
+    private void UpdateStaminaBar()
+    {
+        float staminaPercentage = currentStamina / maxStamina;
+        staminaBar.transform.localScale = new Vector3(staminaPercentage, staminaBar.transform.localScale.y, staminaBar.transform.localScale.z);
+    }
+
+    private void ChangeStamina(float amount)
+    {
+        currentStamina += amount;
+        currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
+        UpdateStaminaBar();
+    }
+
+    private void CheckInactivity()
+    {
+        Vector2 currentMovement = playerMovement.GetCurrentMovement();  // Получаем значение движения от PlayerMovement
+
+        if (currentMovement.magnitude == 0 && !isAttacking && !isWindingUp && !isThrusting && !isThrustWindingUp)
+        {
+            inactivityTimer += Time.deltaTime;
+            if (inactivityTimer >= 2f)
+            {
+                ChangeStamina(maxStamina * Time.deltaTime / 4f);
+            }
+        }
+        else
+        {
+            inactivityTimer = 0f;
+        }
+    }
+
 
     private void UpdateHealthBar()
     {
@@ -153,6 +200,7 @@ public class ArcController : NetworkBehaviour
             this.enemyArcController = enemyArcController;
             if (other.CompareTag("HitBox"))
             {
+                ChangeStamina(10f);
                 Debug.Log("HitBox collision detected"); // Добавлено для отладки
                 CmdChangeHealth(-swordDamage);
                 isInHitBox = true;
@@ -295,11 +343,16 @@ public class ArcController : NetworkBehaviour
                 CmdStartAttack(false);
             }
         }
+
+        CheckInactivity();
     }
 
 
     public void CancelAttack()
     {
+
+        ChangeStamina(-10f);
+
         if (isWindingUp)
         {
             StopCoroutine(WindupAttack());
@@ -322,14 +375,17 @@ public class ArcController : NetworkBehaviour
     {
         this.isAttacking = isAttacking;
     }
-    [Command]
+    //[Command]
     public void CmdStartAttack(bool attackFromRight)
     {
+        if (currentStamina < 8f) return; // Если стамины недостаточно, прекращаем выполнение метода
+        ChangeStamina(-8f); // Отнимаем стамину
         Debug.Log("CmdStartAttack called for " + (isAIPlayer ? "AI" : "Player"));
         this.attackFromRight = attackFromRight;
 
         if (isInChamberHit && attackFromRight == enemyArcController.attackFromRight && enemyArcController != null && !isInHitBox)
         {
+            ChangeStamina(-15f);
             Debug.Log("Chamber detected");
             AttackStopped(enemyArcController);
             RpcSetWindingUp(false);
@@ -359,6 +415,7 @@ public class ArcController : NetworkBehaviour
     {
         if (isBlock && canBlock && !isInHitBox)
         {
+            ChangeStamina(-6f);
             sword.GetComponent<SpriteRenderer>().color = Color.blue;
             if (isInBlockHit)
                 AttackStopped(enemyArcController);
@@ -601,22 +658,7 @@ public class ArcController : NetworkBehaviour
 
         while (currentStep <= segments && isAttacking)
         {
-            //float segmentAngle;
-            //if (attackFromRight)
-            //{
-            //    segmentAngle = Mathf.Deg2Rad * (startAngle + currentStep * angleStep);
-            //}
-            //else
-            //{
-            //    segmentAngle = Mathf.Deg2Rad * (endAngle - currentStep * angleStep);
-            //}
 
-            //float x = Mathf.Cos(segmentAngle) * radius;
-            //float y = Mathf.Sin(segmentAngle) * radius;
-            //sword.transform.position = new Vector3(x, y, 0) + targetObject.transform.position;
-            //sword.transform.rotation = Quaternion.Euler(0, 0, (Mathf.Rad2Deg * segmentAngle) - 90f);
-
-            //currentStep += attackSpeed * Time.deltaTime; // Изменение здесь
 
             SwordMoving(angleStep, attackFromRight, attackSpeed); //Сделал метод, который двигает меч, тк данный блок нужен будет для отката атаки
             yield return null;

@@ -19,6 +19,10 @@ public class PlayerMovement : NetworkBehaviour
         networkIdentity = GetComponent<NetworkIdentity>();
     }
 
+    public Vector2 GetCurrentMovement()
+    {
+        return movement;
+    }
 
 
     private void Update()
