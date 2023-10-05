@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using Mirror;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 [RequireComponent(typeof(LineRenderer))]
 public class ArcController : NetworkBehaviour
@@ -232,7 +233,7 @@ public class ArcController : NetworkBehaviour
             }
             else if (other.CompareTag("HitBox"))
             {
-                isInHitBox = false; 
+                isInHitBox = false;
             }
 
         }
@@ -296,7 +297,8 @@ public class ArcController : NetworkBehaviour
                 }
                 else if (Input.GetAxis("Mouse ScrollWheel") > 0f)
                 {
-                    StartCoroutine(ThrustAttack());
+                    //StartCoroutine(ThrustAttack());     
+                    CmdThrustAttack();
                 }
                 else if (Input.GetKeyDown(KeyCode.F) && blockTimer < maxBlockTime)
                 {
@@ -375,7 +377,7 @@ public class ArcController : NetworkBehaviour
     {
         this.isAttacking = isAttacking;
     }
-    //[Command]
+    [Command]
     public void CmdStartAttack(bool attackFromRight)
     {
         if (currentStamina < 8f) return; // Если стамины недостаточно, прекращаем выполнение метода
@@ -394,7 +396,7 @@ public class ArcController : NetworkBehaviour
         }
         else
         {
-            isWindingUp = true;       
+            isWindingUp = true;
             RpcStartWindupAttack(attackFromRight);
             RpcUpdateAttackIndicators();
         }
@@ -408,10 +410,35 @@ public class ArcController : NetworkBehaviour
         StartCoroutine(WindupAttack());
     }
 
-
-
+    [Command]
+    public void CmdThrustAttack()
+    {
+        RpcThrustAttack();
+        RpcUpdateAttackIndicators();
+    }
+    [ClientRpc]
+    public void RpcThrustAttack()
+    {
+        isThrustWindingUp = true;
+        StartCoroutine(ThrustAttack());
+    }
+    [ClientRpc]
+    public void RpcSetIsWindingThrust(bool isWindingThrust)
+    {
+        isThrustWindingUp = isWindingThrust;
+    }
+    [ClientRpc]
+    public void RpcSetIsThrusting(bool isThrust)
+    {
+        isThrusting = isThrust;
+    }
     [Command]
     public void CmdBlocking(bool isBlock)
+    {
+        RpcBlocking(isBlock);
+    }
+    [ClientRpc]
+    public void RpcBlocking(bool isBlock)
     {
         if (isBlock && canBlock && !isInHitBox)
         {
@@ -434,25 +461,27 @@ public class ArcController : NetworkBehaviour
             sword.GetComponent<SpriteRenderer>().color = Color.white;
         }
     }
-
     private IEnumerator BlockDurationRoutine()
     {
         yield return new WaitForSeconds(maxBlockTime);
         CmdBlocking(false);
     }
-
+   
     private IEnumerator ThrustAttack()
     {
-        isThrustWindingUp = true;
-        CentralSwing.GetComponent<SpriteRenderer>().color = Color.blue;
+        //isThrustWindingUp = true;
+        //CentralSwing.GetComponent<SpriteRenderer>().color = Color.blue;
 
         yield return new WaitForSeconds(thrustWindupTime);
 
         if (isThrustWindingUp)
         {
-            isThrustWindingUp = false;
+            isThrustWindingUp = false;      
             isThrusting = true;
-            CentralSwing.GetComponent<SpriteRenderer>().color = Color.white;
+            RpcSetIsWindingThrust(false);
+            RpcSetIsThrusting(true);
+            //CentralSwing.GetComponent<SpriteRenderer>().color = Color.white;
+            RpcUpdateAttackIndicators();
 
             float middleAngle = Mathf.Deg2Rad * syncedArcAngle;
             float startX = Mathf.Cos(middleAngle) * radius;
@@ -493,6 +522,7 @@ public class ArcController : NetworkBehaviour
 
             sword.transform.position = originalPosition;
             isThrusting = false;
+            RpcSetIsThrusting(false);
         }
     }
 
@@ -527,6 +557,14 @@ public class ArcController : NetworkBehaviour
     }
     private void UpdateAttackIndicators()
     {
+        if (isThrustWindingUp)
+        {
+            CentralSwing.GetComponent<SpriteRenderer>().color = Color.blue;
+        }
+        else 
+        {
+            CentralSwing.GetComponent<SpriteRenderer>().color = Color.white;
+        }
         if (attackFromRight)
         {
             lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
