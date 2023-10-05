@@ -576,6 +576,10 @@ MonoBehaviour:
   arcAngle: 90
   attackSpeed: 80
   backupAttackSpeed: 60
+  returnAttackTime: 0.5
+  minWindupTime: 0.5
+  maxWindupTime: 2
+  maxArcAngle: 360
   healthBar: {fileID: 8245152300185360153}
   maxHealth: 100
   blockCooldown: 1

@@ -16,8 +16,6 @@ public class ArcController : NetworkBehaviour
     public GameObject rightSwing;
     public GameObject CentralSwing;
 
-
-
     public GameObject targetObject;
     public Camera mainCamera;
     public GameObject sword;
@@ -26,6 +24,11 @@ public class ArcController : NetworkBehaviour
     public float arcAngle = 90f;
     public float attackSpeed = 1f;
     public float backupAttackSpeed = 1f;
+    public float returnAttackTime = 0.5f; // время возврата удара
+    private bool isReturning = false; // состояние возврата удара
+
+
+
 
     private LineRenderer lineRenderer;
     private float startAngle;
@@ -281,8 +284,10 @@ public class ArcController : NetworkBehaviour
                 return;
             }
 
-            if (!isAttacking && !isWindingUp && !isThrusting && !isThrustWindingUp)
+            // Проверяем, не находится ли персонаж в состоянии атаки или замаха
+            if (!isAttacking && !isWindingUp && !isThrusting && !isThrustWindingUp && !isReturning)
             {
+                // Обрабатываем ввод пользователя для начала атаки
                 if (Input.GetMouseButtonDown(0))
                 {
                     attackFromRight = false;
@@ -297,20 +302,33 @@ public class ArcController : NetworkBehaviour
                 }
                 else if (Input.GetAxis("Mouse ScrollWheel") > 0f)
                 {
-                    //StartCoroutine(ThrustAttack());     
                     CmdThrustAttack();
                 }
                 else if (Input.GetKeyDown(KeyCode.F) && blockTimer < maxBlockTime)
                 {
                     CmdBlocking(true);
                 }
+
+                // Обрабатываем ввод пользователя для изменения направления атаки
+                Vector3 mousePosition = Input.mousePosition;
+                mousePosition = mainCamera.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, mainCamera.transform.position.y - targetObject.transform.position.y));
+
+                Vector2 direction = new Vector2(
+                    mousePosition.x - targetObject.transform.position.x,
+                    mousePosition.y - targetObject.transform.position.y
+                );
+
+                syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                CmdSyncArcAngle(syncedArcAngle);
             }
 
+            // Обрабатываем ввод пользователя для отмены атаки
             if (isWindingUp && Input.GetKeyDown(KeyCode.X))
             {
                 CmdCancelAttack();
             }
 
+            // Обрабатываем ввод пользователя для отмены колющей атаки
             if (isThrustWindingUp && Input.GetKeyDown(KeyCode.X))
             {
                 StopCoroutine(ThrustAttack());
@@ -318,17 +336,7 @@ public class ArcController : NetworkBehaviour
                 CentralSwing.GetComponent<SpriteRenderer>().color = Color.white;
             }
 
-            Vector3 mousePosition = Input.mousePosition;
-            mousePosition = mainCamera.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, mainCamera.transform.position.y - targetObject.transform.position.y));
-
-            Vector2 direction = new Vector2(
-                mousePosition.x - targetObject.transform.position.x,
-                mousePosition.y - targetObject.transform.position.y
-            );
-
-            syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-            CmdSyncArcAngle(syncedArcAngle);
-
+            // Обновляем таймер блокировки
             if (sword.GetComponent<SpriteRenderer>().color == Color.blue)
             {
                 blockTimer += Time.deltaTime;
@@ -340,14 +348,17 @@ public class ArcController : NetworkBehaviour
         }
         else
         {
+            // Логика для ИИ игрока
             if (!isAttacking && !isBlocked)
             {
                 CmdStartAttack(false);
             }
         }
 
+        // Проверяем неактивность и восстанавливаем стамину при необходимости
         CheckInactivity();
     }
+
 
 
     public void CancelAttack()
@@ -601,9 +612,9 @@ public class ArcController : NetworkBehaviour
     }
     private void LateUpdate()
     {
+        // Всегда обновляем дугу, чтобы она следовала за персонажем
         UpdateArc();
     }
-
     public void SetArc(float newArcAngle)
     {
         arcAngle = newArcAngle;
@@ -696,15 +707,32 @@ public class ArcController : NetworkBehaviour
 
         while (currentStep <= segments && isAttacking)
         {
-
-
-            SwordMoving(angleStep, attackFromRight, attackSpeed); //Сделал метод, который двигает меч, тк данный блок нужен будет для отката атаки
+            SwordMoving(angleStep, attackFromRight, attackSpeed);
             yield return null;
         }
-        currentStep = 0;
-        isAttacking = false;
-        UpdateAttackIndicators();
+
+        // Начать возврат удара после завершения атаки
+        if (isAttacking)
+        {
+            StartCoroutine(ReturnAttack());
+        }
     }
+
+    private IEnumerator ReturnAttack()
+    {
+        isReturning = true;
+        isAttacking = false; // убедитесь, что ваш персонаж больше не атакует
+
+        // Ваш код для возврата удара здесь. Возможно, вы захотите обратить анимацию атаки или что-то в этом роде.
+
+        yield return new WaitForSeconds(returnAttackTime); // ждем, пока удар вернетсяLateUpdate
+
+        isReturning = false; // завершаем возврат удара
+        currentStep = 0; // возможно, вы захотите сбросить свой шаг атаки
+        UpdateAttackIndicators(); // обновите индикаторы атаки, если это необходимо
+    }
+
+
 
     [Command]
     public void CmdChangeHealth(float amount)
