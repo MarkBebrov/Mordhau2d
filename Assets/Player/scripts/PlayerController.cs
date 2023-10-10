@@ -5,15 +5,33 @@ public class PlayerController : NetworkBehaviour
 {
     [SerializeField] private Transform naprTransform;
     [SerializeField] private Camera mainCamera;
-    [SerializeField] private float offsetDistance = 0.5f; // Расстояние от игрока до объекта "napr"
+    [SerializeField] private float offsetDistance = 0.5f;
+    [SyncVar]
+    private float stamina = 100;
+    public float Stamina
+    {
+        get { return stamina; }
+        set 
+        { 
+            stamina = value;
+            RpcStaminaSet(stamina);
+        }
+    }
 
     private NetworkIdentity networkIdentity;
+    private IndicatorsDebug indicators;
 
     private void Awake()
     {
         networkIdentity = GetComponent<NetworkIdentity>();
+        indicators = GetComponent<IndicatorsDebug>();
     }
-
+    [ClientRpc]
+    private void RpcStaminaSet(float stamina)
+    {
+        this.stamina = stamina;
+        indicators.StaminaChanger(stamina);
+    }
     private void Update()
     {
         if (!networkIdentity.isOwned)

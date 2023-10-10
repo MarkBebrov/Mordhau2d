@@ -1175,7 +1175,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3006533963518059376, guid: 62bc9f1e74a8fd24e894658643ddbad5, type: 3}
       propertyPath: isAIPlayer
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3006533963518059376, guid: 62bc9f1e74a8fd24e894658643ddbad5, type: 3}
       propertyPath: attackSpeed
@@ -1183,6 +1183,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3006533963518059376, guid: 62bc9f1e74a8fd24e894658643ddbad5, type: 3}
       propertyPath: syncDirection
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4078641149505563177, guid: 62bc9f1e74a8fd24e894658643ddbad5, type: 3}
+      propertyPath: isAutoAttacking
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4932513209451353115, guid: 62bc9f1e74a8fd24e894658643ddbad5, type: 3}

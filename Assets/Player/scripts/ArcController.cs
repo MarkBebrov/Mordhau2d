@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Collections;
 using Mirror;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 
 [RequireComponent(typeof(LineRenderer))]
 public class ArcController : NetworkBehaviour
@@ -149,8 +148,8 @@ public class ArcController : NetworkBehaviour
         currentHealth = maxHealth;
         UpdateHealthBar();
         hitObjectsDuringCurrentAttack = new HashSet<GameObject>();
-        currentStamina = maxStamina;
-        UpdateStaminaBar();
+        //currentStamina = maxStamina;
+        //UpdateStaminaBar();
         playerMovement = GetComponentInParent<PlayerMovement>();
 
 
@@ -164,9 +163,9 @@ public class ArcController : NetworkBehaviour
 
     private void ChangeStamina(float amount)
     {
-        currentStamina += amount;
-        currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
-        UpdateStaminaBar();
+        //currentStamina += amount;
+        //currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
+        //UpdateStaminaBar();
     }
 
     private void CheckInactivity()
@@ -290,23 +289,23 @@ public class ArcController : NetworkBehaviour
                 // Обрабатываем ввод пользователя для начала атаки
                 if (Input.GetMouseButtonDown(0))
                 {
-                    attackFromRight = false;
-                    CmdStartAttack(attackFromRight);
-                    UpdateAttackIndicators();
+                   // attackFromRight = false;
+                    //CmdStartAttack(attackFromRight); 
+                   // UpdateAttackIndicators();
                 }
                 else if (Input.GetMouseButtonDown(1))
                 {
-                    attackFromRight = true;
-                    CmdStartAttack(attackFromRight);
-                    UpdateAttackIndicators();
+                    //attackFromRight = true;
+                    //CmdStartAttack(attackFromRight);
+                    //UpdateAttackIndicators();
                 }
                 else if (Input.GetAxis("Mouse ScrollWheel") > 0f)
                 {
-                    CmdThrustAttack();
+                    //CmdThrustAttack();
                 }
                 else if (Input.GetKeyDown(KeyCode.F) && blockTimer < maxBlockTime)
                 {
-                    CmdBlocking(true);
+                    //CmdBlocking(true);
                 }
 
                 // Обрабатываем ввод пользователя для изменения направления атаки
@@ -580,15 +579,15 @@ public class ArcController : NetworkBehaviour
         {
             lefto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
             righto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 1);
-            rightSwing.GetComponent<SpriteRenderer>().color = isWindingUp ? Color.blue : Color.white; // Изменено местами
-            leftSwing.GetComponent<SpriteRenderer>().color = Color.white; // Изменено местами
+            rightSwing.GetComponent<SpriteRenderer>().color = isWindingUp ? Color.blue : Color.white; 
+            leftSwing.GetComponent<SpriteRenderer>().color = Color.white; 
         }
         else
         {
             lefto.GetComponent<SpriteRenderer>().color = new Color(1, 0, 0, 1);
             righto.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
-            leftSwing.GetComponent<SpriteRenderer>().color = isWindingUp ? Color.blue : Color.white; // Изменено местами
-            rightSwing.GetComponent<SpriteRenderer>().color = Color.white; // Изменено местами
+            leftSwing.GetComponent<SpriteRenderer>().color = isWindingUp ? Color.blue : Color.white;
+            rightSwing.GetComponent<SpriteRenderer>().color = Color.white;
         }
     }
 
@@ -613,7 +612,7 @@ public class ArcController : NetworkBehaviour
     private void LateUpdate()
     {
         // Всегда обновляем дугу, чтобы она следовала за персонажем
-        UpdateArc();
+       // UpdateArc();
     }
     public void SetArc(float newArcAngle)
     {

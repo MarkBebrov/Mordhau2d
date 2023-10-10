@@ -100,6 +100,10 @@ GameObject:
   - component: {fileID: 7048013280604543587}
   - component: {fileID: 2942862638443904405}
   - component: {fileID: 7741733379466570043}
+  - component: {fileID: 4078641149505563177}
+  - component: {fileID: 3404655066927029694}
+  - component: {fileID: 2231194541674351176}
+  - component: {fileID: 6887096059538932299}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -321,6 +325,101 @@ MonoBehaviour:
   runSpeed: 10
   backwardSpeed: 2.5
   sideStepSpeed: 3
+--- !u!114 &4078641149505563177
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147487233048792001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ddf2d78a50d7a949b94f089623fa97f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  attackFromRight: 0
+  isAttacking: 0
+  isAutoAttacking: 0
+  isThrustAttacking: 0
+  stamina: 100
+  sword: {fileID: 3132114763442173725}
+  targetObject: {fileID: 946446399811186537}
+  mainCamera: {fileID: 1269390985800062568}
+  enemyAttack: {fileID: 0}
+  lineRenderer: {fileID: 3197398990594220250}
+  windupTime: 1
+  arcAngle: 90
+  attackSpeed: 80
+  radius: 2
+  returnAttackTime: 0.2
+  attackStamina: 10
+  thrustWindupTime: 1
+  thrustDistance: 1
+  thrustSpeed: 2
+  thrustAttackStamina: 10
+  segments: 50
+--- !u!114 &3404655066927029694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147487233048792001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c19e7c5bd747984eafe893c9a975f8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  lefto: {fileID: 8528134074314684650}
+  righto: {fileID: 2461379869113947218}
+  rightSwing: {fileID: 7397076746013394223}
+  leftSwing: {fileID: 38217764764166262}
+  centralSwing: {fileID: 4190058012097020015}
+  staminaBar: {fileID: 4241201020847453809}
+--- !u!114 &2231194541674351176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147487233048792001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63d7a0101a8f8d64586a703f467ada69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  isInHitBox: 0
+  isInChamberHit: 0
+  isInBlockHit: 0
+  playerAttackManager: {fileID: 4078641149505563177}
+--- !u!114 &6887096059538932299
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147487233048792001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f7d83a417c76c744ae45046073796e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  sword: {fileID: 3132114763442173725}
+  blockCooldown: 1
+  maxBlockTime: 0.25
+  blockStamina: 5
 --- !u!1 &946446399811186537
 GameObject:
   m_ObjectHideFlags: 0
@@ -577,9 +676,6 @@ MonoBehaviour:
   attackSpeed: 80
   backupAttackSpeed: 60
   returnAttackTime: 0.5
-  minWindupTime: 0.5
-  maxWindupTime: 2
-  maxArcAngle: 360
   healthBar: {fileID: 8245152300185360153}
   maxHealth: 100
   blockCooldown: 1
