@@ -7,31 +7,25 @@ public class HitStates : NetworkBehaviour
     public bool isInChamberHit;
     public bool isInBlockHit;
 
-    public AttackManager playerAttackManager;
+    [SerializeField] private AttackManager playerAttackManager;
+    [SerializeField] private PlayerController playerController;
   
-    public void OnSwordHit(Collider2D other, AttackManager enemyAttack)
+    public void OnSwordHit(Collider2D other, AttackManager enemyAttack,float damage)
     {
-        //Debug.Log("Collision detected with " + other.tag); // Добавлено для отладки
-
         if (enemyAttack != null && (enemyAttack.isAttacking || enemyAttack.isThrustAttacking))
         {
             playerAttackManager.enemyAttack = enemyAttack;
             if (other.CompareTag("HitBox"))
             {
-                //ChangeStamina(10f);
-                //Debug.Log("HitBox collision detected"); // Добавлено для отладки
-                //CmdChangeHealth(-swordDamage);
+                playerController.HP -= damage;
                 isInHitBox = true;
-                //enemyArcController.hitObjectsDuringCurrentAttack.Add(other.gameObject);
             }
             else if (other.CompareTag("HitBoxChamber"))
             {
-                //Debug.Log("HitBoxChamber collision detected"); // Добавлено для отладки
                 isInChamberHit = true;
             }
             else if (other.CompareTag("HitBoxBlock"))
             {
-                //Debug.Log("HitBoxBlock collision detected");
                 isInBlockHit = true;
             }
         }

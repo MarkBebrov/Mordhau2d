@@ -12,7 +12,6 @@ public class AttackManager : NetworkBehaviour
     public bool isThrustAttacking = false;
     private bool isThrustWindingUp = false; 
 
-    [SerializeField] private float stamina = 100;
     private float currentStep = 0f;
     private float startAngle;
     private float endAngle;
@@ -80,7 +79,6 @@ public class AttackManager : NetworkBehaviour
             }
             else
             {
-                //CmdStartAttack(false);
                 CmdStartThrustAttack();
             }
             Vector3 mousePosition = Input.mousePosition;
@@ -187,8 +185,8 @@ public class AttackManager : NetworkBehaviour
     [Command]
     private void CmdStartAttack(bool attackFromRight)
     {
-        if (stamina < 8f) return;
-            this.attackFromRight = attackFromRight;
+        if (playerController.Stamina < attackStamina) return;
+        this.attackFromRight = attackFromRight;
         playerController.Stamina -= attackStamina;
         if (hitStates.isInChamberHit && attackFromRight == enemyAttack.attackFromRight && enemyAttack != null && !hitStates.isInHitBox)
             {           
@@ -205,8 +203,8 @@ public class AttackManager : NetworkBehaviour
     [Command]
     private void CmdStartThrustAttack()
     {
-        if (stamina < 8f) return;
-            this.isThrustAttacking = true;
+        if (playerController.Stamina < thrustAttackStamina) return;
+        this.isThrustAttacking = true;
         playerController.Stamina -= thrustAttackStamina;
         if (hitStates.isInChamberHit && enemyAttack.isThrustAttacking && enemyAttack != null && !hitStates.isInHitBox)
             {
@@ -388,13 +386,11 @@ public class AttackManager : NetworkBehaviour
     }
     private IEnumerator ReturnAttack()
     {
-        Debug.Log(isReturning);
         isReturning = true;
         isAttacking = false;
         yield return new WaitForSeconds(returnAttackTime);
         isReturning = false;
         currentStep = 0;
-        //UpdateAttackIndicators();
     }
     #endregion
 }

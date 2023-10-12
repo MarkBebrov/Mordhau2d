@@ -146,7 +146,7 @@ public class ArcController : NetworkBehaviour
     private void Start()
     {
         currentHealth = maxHealth;
-        UpdateHealthBar();
+        //UpdateHealthBar();
         hitObjectsDuringCurrentAttack = new HashSet<GameObject>();
         //currentStamina = maxStamina;
         //UpdateStaminaBar();

@@ -16,6 +16,7 @@ public class PlayerMovement : NetworkBehaviour
     private bool isDirectionalMovement = false; // Переменная для проверки режима движения
     [SerializeField] private float backwardSpeed = 2.5f; // Скорость движения назад
     [SerializeField] private float sideStepSpeed = 3f; // Скорость движения вбок
+    [SerializeField] private bool isRunning = false;
 
     private void Awake()
     {
@@ -34,7 +35,10 @@ public class PlayerMovement : NetworkBehaviour
         {
             return;
         }
-
+        if(Input.GetKeyDown(KeyCode.LeftShift))
+            isRunning = true;
+        else if(Input.GetKeyUp(KeyCode.LeftShift))
+            isRunning = false;
         if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
             isDirectionalMovement = !isDirectionalMovement; // Переключение режима движения
@@ -62,12 +66,12 @@ public class PlayerMovement : NetworkBehaviour
             Vector2 sideMovement = moveX * sideStepSpeed * perpendicular;
 
             movement = (forwardMovement + sideMovement).normalized;
-            movement *= (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed);
+            movement *= isRunning ? runSpeed : walkSpeed;
         }
         else
         {
             movement = new Vector2(moveX, moveY).normalized;
-            movement *= (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed);
+            movement *= isRunning ? runSpeed : walkSpeed;
         }
     }
 

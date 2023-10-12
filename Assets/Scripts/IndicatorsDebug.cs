@@ -6,17 +6,20 @@ public class IndicatorsDebug : NetworkBehaviour
     private Color white = new Color(1, 1, 1, 0.5f);
     private Color red = new Color(1, 0, 0, 0.5f);
 
-    private float staminaScale;
+    private float staminaBarScale;
+    private float healthBarScale;
 
-    public GameObject lefto;
-    public GameObject righto;
-    public GameObject rightSwing;
-    public GameObject leftSwing;
-    public GameObject centralSwing;
-    public GameObject staminaBar;
+    [SerializeField] private GameObject lefto;
+    [SerializeField] private GameObject righto;
+    [SerializeField] private GameObject rightSwing;
+    [SerializeField] private GameObject leftSwing;
+    [SerializeField] private GameObject centralSwing;
+    [SerializeField] private GameObject staminaBar;
+    [SerializeField] private GameObject healthBar;
     private void Start()
     {
-        staminaScale = staminaBar.transform.localScale.x;
+        staminaBarScale = staminaBar.transform.localScale.x;
+        healthBarScale = healthBar.transform.localScale.x;
     }
     public void AttackDirrection(bool isToRight)
     {
@@ -52,8 +55,12 @@ public class IndicatorsDebug : NetworkBehaviour
     }
     public void StaminaChanger(float stamina)
     {
-        float newScale = stamina * staminaScale / 100;
-        Debug.Log(newScale);
+        float newScale = stamina * staminaBarScale / 100;
         staminaBar.transform.localScale = new Vector3(newScale, staminaBar.transform.localScale.y, staminaBar.transform.localScale.z);
+    }
+    public void HealthChanger(float hp)
+    {
+        float newScale = hp * healthBarScale / 100;
+        healthBar.transform.localScale = new Vector3(newScale, healthBar.transform.localScale.y, healthBar.transform.localScale.z);
     }
 }

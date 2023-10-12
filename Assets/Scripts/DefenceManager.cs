@@ -28,6 +28,7 @@ public class DefenceManager : NetworkBehaviour
     [Command]
     public void CmdBlocking(bool isBlock)
     {
+        if (playerController.Stamina < blockStamina) return;
         RpcBlocking(isBlock);
     }
     [ClientRpc]

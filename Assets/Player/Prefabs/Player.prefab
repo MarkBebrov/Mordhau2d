@@ -344,7 +344,6 @@ MonoBehaviour:
   isAttacking: 0
   isAutoAttacking: 0
   isThrustAttacking: 0
-  stamina: 100
   sword: {fileID: 3132114763442173725}
   targetObject: {fileID: 946446399811186537}
   mainCamera: {fileID: 1269390985800062568}
@@ -382,6 +381,7 @@ MonoBehaviour:
   leftSwing: {fileID: 38217764764166262}
   centralSwing: {fileID: 4190058012097020015}
   staminaBar: {fileID: 4241201020847453809}
+  healthBar: {fileID: 8245152300185360153}
 --- !u!114 &2231194541674351176
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -401,6 +401,7 @@ MonoBehaviour:
   isInChamberHit: 0
   isInBlockHit: 0
   playerAttackManager: {fileID: 4078641149505563177}
+  playerController: {fileID: 6781257539616892197}
 --- !u!114 &6887096059538932299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -653,7 +654,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1438926746521466726}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6d7b5b0918214ed429ebb17da6191088, type: 3}
   m_Name: 
@@ -1182,6 +1183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2079e89d5af923b45b703d087edf03f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  damage: 15
 --- !u!1 &3685943841945089451
 GameObject:
   m_ObjectHideFlags: 0

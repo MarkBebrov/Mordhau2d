@@ -5,6 +5,7 @@ public class SwordCollisionHandler : MonoBehaviour
 {
     private ArcController _arcController;
     private AttackManager attackManager;
+    [SerializeField] private float damage;
 
     private void Start()
     {
@@ -22,7 +23,7 @@ public class SwordCollisionHandler : MonoBehaviour
     //}
     private void OnTriggerEnter2D(Collider2D other)
     {
-        other.gameObject.GetComponentInParent<HitStates>()?.OnSwordHit(other, attackManager);
+        other.gameObject.GetComponentInParent<HitStates>()?.OnSwordHit(other, attackManager,damage);
        // other.transform.parent?.Find("ArcObject")?.gameObject.GetComponent<ArcController>().OnSwordHit(other, _arcController);
     }
     private void OnTriggerExit2D(Collider2D other)
