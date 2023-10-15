@@ -56,39 +56,77 @@ public class AttackManager : NetworkBehaviour
     {
         if (!isLocalPlayer)
             return;
-        if (!isAttacking && !isWindingUp && !isReturning && !isThrustAttacking)
+        if (Input.GetKeyDown(KeyCode.T)) //Press while attacking 
         {
-            if (!isAutoAttacking)
+            if (isAutoAttacking)
             {
-                if (Input.GetMouseButtonDown(0))
-                {
-                    CmdStartAttack(false);
-                }
-                else if (Input.GetMouseButtonDown(1))
-                {
-                    CmdStartAttack(true);
-                }
-                else if (Input.GetKeyDown(KeyCode.F))
-                {
-                    defenceManager.CmdBlocking(true);
-                }
-                else if (Input.GetAxis("Mouse ScrollWheel") > 0f)
-                {
-                    CmdStartThrustAttack();
-                }
+                SetAuto(false);
+                isAutoAttacking = false;
             }
             else
             {
-                CmdStartThrustAttack();
+                SetAuto(true);
+                isAutoAttacking = true;
             }
-            Vector3 mousePosition = Input.mousePosition;
-            mousePosition = mainCamera.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, mainCamera.transform.position.y - targetObject.transform.position.y));
-            Vector2 direction = new Vector2(
-            mousePosition.x - targetObject.transform.position.x,
-            mousePosition.y - targetObject.transform.position.y
-                  );
-            syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-            CmdSyncArcAngle(syncedArcAngle);
+        }
+        if (!isAttacking && !isReturning && !isThrustAttacking)
+        {
+            if (!isAutoAttacking)
+            {
+                if (!isThrustWindingUp && !isWindingUp)
+                {
+
+                    if (Input.GetKeyDown(KeyCode.F))
+                    {
+                        defenceManager.CmdBlocking(true);
+                    }
+                    Vector3 mousePosition = Input.mousePosition;
+                    mousePosition = mainCamera.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, mainCamera.transform.position.y - targetObject.transform.position.y));
+                    Vector2 direction = new Vector2(
+                    mousePosition.x - targetObject.transform.position.x,
+                    mousePosition.y - targetObject.transform.position.y
+                          );
+                    syncedArcAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                    CmdSyncArcAngle(syncedArcAngle);
+                }
+                    if (Input.GetMouseButtonDown(0) && !isWindingUp)
+                    {
+
+                        if (!isThrustWindingUp)
+                            CmdStartAttack(false, false);
+                        else
+                        {
+                            CmdAttackCancel(false);
+                            CmdStartAttack(false, true);
+                        }
+                    }
+                    else if (Input.GetMouseButtonDown(1) && !isWindingUp)
+                    {
+                        if (!isThrustWindingUp)
+                            CmdStartAttack(true, false);
+                        else
+                        {
+                            CmdAttackCancel(false);
+                            CmdStartAttack(true, true);
+                        }
+                    }
+
+                    if (Input.GetAxis("Mouse ScrollWheel") > 0f && !isThrustWindingUp)
+                    {
+                        if (!isWindingUp)
+                            CmdStartThrustAttack();
+                        else
+                        {
+                            CmdAttackCancel(true);
+                            CmdStartThrustAttack();
+                        }
+                    }
+            }
+            else
+            {
+                if (!isThrustWindingUp && !isWindingUp)
+                    CmdStartThrustAttack();
+            }
         }
         else
         {
@@ -127,10 +165,12 @@ public class AttackManager : NetworkBehaviour
         if (isDefault)
         {
             isWindingUp = false;
+            isAttacking = false;
         }
         else
         {
             isThrustWindingUp = false;
+            isThrustAttacking = false;
         }
         RpcAttaclCancel(isDefault);
     }
@@ -140,12 +180,15 @@ public class AttackManager : NetworkBehaviour
         if (isDefault)
         {
             isWindingUp = false;
+            isAttacking = false;
             indicators.AttackWindUpIndicators(attackFromRight, false);
         }
         else
         {
             indicators.ThrustAttackWindUpIndicators(false);
+            isThrustAttacking = false;
             isThrustWindingUp = false;
+
         }
         StopCoroutine(windUpCoroutine);
     }
@@ -158,6 +201,7 @@ public class AttackManager : NetworkBehaviour
         //enemy.StartCoroutine(enemy.ReturnAttack());
         enemy.StartCoroutine(enemy.SwordBackup());
         enemy.isAttacking = false;
+        enemy.isThrustAttacking =false;
         enemy.currentStep = 0;
     }
     private IEnumerator SwordBackup()
@@ -183,40 +227,32 @@ public class AttackManager : NetworkBehaviour
         syncedArcAngle = newArcAngle;
     }
     [Command]
-    private void CmdStartAttack(bool attackFromRight)
+    private void CmdStartAttack(bool attackFromRight, bool isRedirected)
     {
         if (playerController.Stamina < attackStamina) return;
         this.attackFromRight = attackFromRight;
         playerController.Stamina -= attackStamina;
-        if (hitStates.isInChamberHit && attackFromRight == enemyAttack.attackFromRight && enemyAttack != null && !hitStates.isInHitBox)
-            {           
-                RpcAttackStopped(enemyAttack);
-                isWindingUp = false;
-                RpcStartAttack(attackFromRight, isWindingUp);
-            }
-            else
-            {
-                isWindingUp = true;
-                RpcStartAttack(attackFromRight, isWindingUp);
-            }
+        if (hitStates.isInChamberHit && attackFromRight != enemyAttack.attackFromRight && enemyAttack != null && !hitStates.isInHitBox)
+        {           
+            RpcAttackStopped(enemyAttack);
+        }
+        isWindingUp = true;
+        RpcStartAttack(attackFromRight, isWindingUp);
     }
     [Command]
     private void CmdStartThrustAttack()
     {
         if (playerController.Stamina < thrustAttackStamina) return;
-        this.isThrustAttacking = true;
         playerController.Stamina -= thrustAttackStamina;
         if (hitStates.isInChamberHit && enemyAttack.isThrustAttacking && enemyAttack != null && !hitStates.isInHitBox)
             {
-                RpcAttackStopped(enemyAttack);
-                isThrustWindingUp = false;
-                RpcStartThrustAttack(isThrustWindingUp);
+            RpcAttackStopped(enemyAttack);
+            isThrustWindingUp = false;
+            //this.isThrustAttacking = true;
+            //RpcStartThrustAttack(isThrustWindingUp);
             }
-            else
-            {
-                isThrustWindingUp = true;
-                RpcStartThrustAttack(isThrustWindingUp);
-            }
+        isThrustWindingUp = true;
+        RpcStartThrustAttack(isThrustWindingUp);
     }
     [ClientRpc]
     private void RpcStartAttack(bool attackFromRight, bool isWindingUp)
@@ -238,7 +274,6 @@ public class AttackManager : NetworkBehaviour
     [ClientRpc]
     private void RpcStartThrustAttack(bool isWindingUp)
     {
-        this.isThrustAttacking = true;
         isThrustWindingUp = isWindingUp;
         indicators.ThrustAttackWindUpIndicators(isThrustWindingUp);
         if (isWindingUp)
@@ -247,6 +282,7 @@ public class AttackManager : NetworkBehaviour
         }
         else
         {
+            this.isThrustAttacking = true;
             swordAttacking = StartCoroutine(SwordAttack(false));
         }
     }
