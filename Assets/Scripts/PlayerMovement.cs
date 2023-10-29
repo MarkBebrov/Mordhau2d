@@ -103,6 +103,7 @@ public class PlayerMovement : NetworkBehaviour
         animator.SetFloat("Speed", movement.sqrMagnitude);
         animator.SetBool("LastDirectionRight", lastDirection == Direction.Right);
         animator.SetBool("LastDirectionUp", lastDirection == Direction.Up);
+        animator.SetBool("LastDirectionDown", lastDirection == Direction.Down);
     }
 
     private void FixedUpdate()
