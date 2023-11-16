@@ -18,6 +18,8 @@ public class HitStates : NetworkBehaviour
             if (other.CompareTag("HitBox"))
             {
                 playerController.HP -= damage;
+
+                playerAttackManager.RpcAttackStopped(playerAttackManager);
                 isInHitBox = true;
             }
             else if (other.CompareTag("HitBoxChamber"))
